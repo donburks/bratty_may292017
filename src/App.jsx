@@ -40,6 +40,10 @@ class App extends Component {
     };
   }
 
+  componentDidUpdate() {
+    window.scrollTo(0, document.querySelector(".messages").scrollHeight);
+  }
+
   render() {
     return (
       <div>

@@ -32,15 +32,41 @@ wss.on('connection', (ws) => {
 
   ws.on('message', (data) => {
     const message = JSON.parse(data);
-    let type = 'textMessage';
-    let uuid = uuidV1();
-    let outputMessage = {
-      type: type,
-      id: uuid,
-      username: message.username,
-      content: message.content
+    message.type = 'textMessage';
+    message.id = uuidV1();
+    if (message.content[0] == '/') {
+      let cmd_string = message.content.split(' ');
+      let cmd = cmd_string.shift().replace('/', '');
+      message.content = cmd_string.join(' '); 
+      switch(cmd) {
+        case 'me':
+          message.type = 'meMessage';
+          break;
+        case 'gif':
+          message.type = 'gifMessage';
+          request(`http://api.giphy.com/v1/gifs/search?q=${message.content}&api_key=2666876f73f549b9a8ac8bbc3c67bc6a&rating=pg`, (err, response, body) => {
+            let gifData = JSON.parse(body);
+            let index = Math.floor(Math.random() * gifData.data.length); 
+            message.url = gifData.data[index].images.original.url;
+            wss.broadcast(JSON.stringify(message));
+          });
+          break;
+        case 'random':
+          message.type = 'gifMessage';
+          request('http://api.giphy.com/v1/gifs/random?api_key=2666876f73f549b9a8ac8bbc3c67bc6a&rating=pg', (err, response, body) => {
+            var gifData = JSON.parse(body);
+            message.url = gifData.data.image_url; 
+            wss.broadcast(JSON.stringify(message));
+          });
+          break;
+        default:
+          message.type = 'errorMessage';      
+          break;
+      } 
+    } 
+    if (message.type !== 'gifMessage') {
+      wss.broadcast(JSON.stringify(message));
     }
-    wss.broadcast(JSON.stringify(outputMessage));
   });
 
   // Set up a callback for when a client closes the socket. This usually means they closed their browser.
